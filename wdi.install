@@ -1,0 +1,23 @@
+<?php
+// $Id$
+
+/**
+ * @file
+ * Install functions for the wdi module.
+ */
+
+/**
+ * Implements hook_uninstall().
+ */
+function wdi_uninstall() {
+  $variables = array(
+    'wdi_application_name',
+    'wdi_msapplication_tooltip',
+    'wdi_msapplication_starturl',
+    'wdi_msapplication_navbutton_color',
+    'wdi_msapplication_window_width',
+    'wdi_msapplication_window_height',
+  );
+  array_map('variable_del', $variables);
+}
+

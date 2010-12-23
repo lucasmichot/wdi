@@ -1,0 +1,309 @@
+<?php
+// $Id$
+
+/**
+ * @file
+ * Functions for the wdi module.
+ */
+
+/**
+ * Implements hook_help().
+ */
+function wdi_help($path, $arg) {
+  switch ($path) {
+    case 'admin/config/search/wdi':
+    case 'admin/help#wdi':
+      $website = l('http://msdn.microsoft.com/en-us/library/gg131029(v=VS.85).aspx', 'http://msdn.microsoft.com/en-us/library/gg131029(v=VS.85).aspx', array('attributes' => array('target' => '_blank')));
+      return '<p>' . t('Get more help for Pinned Sites configuration at :') . '<br>' . $website . '</p>';
+  }
+}
+
+/**
+ * Implements hook_permission().
+ */
+function wdi_permission() {
+  $permissions = array();
+  $permissions['administer wdi'] = array(
+    'title' => t('Administer Windows Desktop Integration'),
+    'description' => t('Perform administration tasks for WDI.'),
+  );
+  return $permissions;
+}
+
+/**
+ * Implements hook_menu().
+ */
+function wdi_menu() {
+  $items = array();
+  $items['admin/config/search/wdi'] = array(
+    'title' => 'Windows Desktop Integration',
+    'description' => 'Manage the way Windows 7 integrates Internet Explorer 9.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('wdi_admin_settings'),
+    'access callback' => 'user_access',
+    'access arguments' => array('administer wdi'),
+    'type' => MENU_NORMAL_ITEM,
+    'file' => 'wdi.admin.inc',
+  );
+  return $items;
+}
+
+/**
+ * Validation for wdi_admin_settings form
+ */
+function wdi_admin_settings_validate($form, &$form_state) {
+  // Trim all values
+  $form_state['values'] = array_map('trim', $form_state['values']);
+
+  // Application start URL
+  if (valid_url($form_state['values']['wdi_msapplication_starturl'], FALSE) == FALSE) {
+    form_set_error('wdi_msapplication_starturl', t('This is not a valid URL.'));
+  }
+
+  // Navigation button color
+  $color = $form_state['values']['wdi_msapplication_navbutton_color'];
+  if (preg_match('/^#?([\da-f]{3}){1,2}$/i', $color)) {
+    $form_state['values']['wdi_msapplication_navbutton_color'] = '#' . ltrim(drupal_strtolower($color), '#');
+  }
+  else {
+    $form_state['values']['wdi_msapplication_navbutton_color'] = _wdi_named_color($color) ? $color : NULL;
+  }
+
+  // Window width
+  $width = ltrim($form_state['values']['wdi_msapplication_window_width'], 0);
+  $form_state['values']['wdi_msapplication_window_width'] = (preg_match('/^\d{3,4}$/', $width) == 0 || (int)$width < 800) ? 800 : $width;
+
+  // Window height
+  $height = ltrim($form_state['values']['wdi_msapplication_window_height'], 0);
+  $form_state['values']['wdi_msapplication_window_height'] = (preg_match('/^\d{3,4}$/', $height) == 0 || (int)$height < 600) ? 600 : $height;
+}
+
+/**
+ * Submit Reset button from wdi_admin_settings form.
+ */
+function wdi_admin_settings_reset_submit($form, &$form_state) {
+  $variables = array(
+    'wdi_application_name',
+    'wdi_msapplication_tooltip',
+    'wdi_msapplication_starturl',
+    'wdi_msapplication_navbutton_color',
+    'wdi_msapplication_window_width',
+    'wdi_msapplication_window_height',
+  );
+  array_map('variable_del', $variables);
+  drupal_set_message(t('The configuration options have been reset to their default values.'));
+}
+
+/**
+ * Implements hook_init().
+ */
+function wdi_init() {
+  if (_wdi_ie9() == TRUE) {
+    _wdi_set_general_metas();
+  }
+}
+
+/**
+ * Returns TRUE if the browser is IE9
+ */
+function _wdi_ie9() {
+  return $_SERVER['HTTP_USER_AGENT'] == 'Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.1; Trident/5.0';
+}
+
+/**
+ * Returns TRUE if this is a named color
+ */
+function _wdi_named_color($color) {
+  $named_colors = array(
+    'AliceBlue',
+    'AntiqueWhite',
+    'Aqua',
+    'Aquamarine',
+    'Azure',
+    'Beige',
+    'Bisque',
+    'Black',
+    'BlanchedAlmond',
+    'Blue',
+    'BlueViolet',
+    'Brown',
+    'BurlyWood',
+    'CadetBlue',
+    'Chartreuse',
+    'Chocolate',
+    'Coral',
+    'CornflowerBlue',
+    'Cornsilk',
+    'Crimson',
+    'Cyan',
+    'DarkBlue',
+    'DarkCyan',
+    'DarkGoldenrod',
+    'DarkGray',
+    'DarkGrey',
+    'DarkGreen',
+    'DarkKhaki',
+    'DarkMagenta',
+    'DarkOliveGreen',
+    'DarkOrange',
+    'DarkOrchid',
+    'DarkRed',
+    'DarkSalmon',
+    'DarkSeaGreen',
+    'DarkSlateBlue',
+    'DarkSlateGray',
+    'DarkSlateGrey',
+    'DarkTurquoise',
+    'DarkViolet',
+    'DeepPink',
+    'DeepSkyBlue',
+    'DimGray',
+    'DimGrey',
+    'DodgerBlue',
+    'FireBrick',
+    'FloralWhite',
+    'ForestGreen',
+    'Fuchsia',
+    'Gainsboro',
+    'GhostWhite',
+    'Gold',
+    'Goldenrod',
+    'Gray',
+    'Grey',
+    'Green',
+    'GreenYellow',
+    'Honeydew',
+    'HotPink',
+    'IndianRed',
+    'Indigo',
+    'Ivory',
+    'Khaki',
+    'Lavender',
+    'LavenderBlush',
+    'LawnGreen',
+    'LemonChiffon',
+    'LightBlue',
+    'LightCoral',
+    'LightCyan',
+    'LightGoldenrodYellow',
+    'LightGreen',
+    'LightGray',
+    'LightGrey',
+    'LightPink',
+    'LightSalmon',
+    'LightSeaGreen',
+    'LightSkyBlue',
+    'LightSlateGray',
+    'LightSlateGrey',
+    'LightSteelBlue',
+    'LightYellow',
+    'Lime',
+    'LimeGreen',
+    'Linen',
+    'Magenta',
+    'Maroon',
+    'MediumAquamarine',
+    'MediumBlue',
+    'MediumOrchid',
+    'MediumPurple',
+    'MediumSeaGreen',
+    'MediumSlateBlue',
+    'MediumSpringGreen',
+    'MediumTurquoise',
+    'MediumVioletRed',
+    'MidnightBlue',
+    'MintCream',
+    'MistyRose',
+    'Moccasin',
+    'NavajoWhite',
+    'Navy',
+    'OldLace',
+    'Olive',
+    'OliveDrab',
+    'Orange',
+    'OrangeRed',
+    'Orchid',
+    'PaleGoldenrod',
+    'PaleGreen',
+    'PaleTurquoise',
+    'PaleVioletRed',
+    'PapayaWhip',
+    'PeachPuff',
+    'Peru',
+    'Pink',
+    'Plum',
+    'PowderBlue',
+    'Purple',
+    'Red',
+    'RosyBrown',
+    'RoyalBlue',
+    'SaddleBrown',
+    'Salmon',
+    'SandyBrown',
+    'SeaGreen',
+    'Seashell',
+    'Sienna',
+    'Silver',
+    'SkyBlue',
+    'SlateBlue',
+    'SlateGray',
+    'SlateGrey',
+    'Snow',
+    'SpringGreen',
+    'SteelBlue',
+    'Tan',
+    'Teal',
+    'Thistle',
+    'Tomato',
+    'Turquoise',
+    'Violet',
+    'Wheat',
+    'White',
+    'WhiteSmoke',
+    'Yellow',
+    'YellowGreen',
+  );
+  return in_array(strtolower($color), array_map('strtolower', $named_colors));
+}
+
+/**
+ * Set general metas
+ */
+function _wdi_set_general_metas() {
+  // Define all metas
+  $metas = array();
+
+  if ($application_name = variable_get('wdi_application_name', variable_get('site_name'))) {
+    $metas['application-name'] = $application_name;
+  }
+
+  if ($tooltip = variable_get('wdi_msapplication_tooltip', variable_get('site_slogan'))) {
+    $metas['msapplication-tooltip'] = $tooltip;
+  }
+
+  if ($color = variable_get('wdi_msapplication_navbutton_color')) {
+    $metas['msapplication-navbutton-color'] = $color;
+  }
+
+  $metas['msapplication-window'] = 'width=' . variable_get('wdi_msapplication_window_width', 800) . ';height=' . variable_get('wdi_msapplication_window_height', 600);
+
+  if (variable_get('site_frontpage') == variable_get('wdi_msapplication_starturl')) {
+    $metas['msapplication-starturl'] = url('<front>', array('absolute' => TRUE));
+  }
+  else {
+    $metas['msapplication-starturl'] = url(variable_get('wdi_msapplication_starturl'), array('absolute' => TRUE));
+  }
+
+  // Write all metas
+  foreach ($metas as $key => $value) {
+    $element = array(
+      '#tag' => 'meta',
+      '#attributes' => array(
+        'name' => $key,
+        'content' => $value,
+      ),
+    );
+    drupal_add_html_head($element, $key);
+  }
+}
+

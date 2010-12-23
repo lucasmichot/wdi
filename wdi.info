@@ -1,0 +1,9 @@
+; $Id:
+name = "Windows Desktop Interation"
+description = "Helps integrate Internet Explorer 9 into Windows 7."
+core = 7.x
+files[] = wdi.install
+files[] = wdi.admin.inc
+files[] = wdi.module
+configure = admin/config/search/wdi
+version = 7.x
