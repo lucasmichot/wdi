@@ -12,6 +12,10 @@
 function wdi_help($path, $arg) {
   switch ($path) {
     case 'admin/config/search/wdi':
+    case 'admin/config/search/wdi/tasks':
+      return '<p>' . t('All tasks') . '</p>';
+
+    case 'admin/config/search/wdi/jumplists':
     case 'admin/help#wdi':
       $website = l('http://msdn.microsoft.com/en-us/library/gg131029(v=VS.85).aspx', 'http://msdn.microsoft.com/en-us/library/gg131029(v=VS.85).aspx', array('attributes' => array('target' => '_blank')));
       return '<p>' . t('Get more help for Pinned Sites configuration at :') . '<br>' . $website . '</p>';
@@ -35,6 +39,7 @@ function wdi_permission() {
  */
 function wdi_menu() {
   $items = array();
+
   $items['admin/config/search/wdi'] = array(
     'title' => 'Windows Desktop Integration',
     'description' => 'Manage the way Windows 7 integrates Internet Explorer 9.',
@@ -45,6 +50,83 @@ function wdi_menu() {
     'type' => MENU_NORMAL_ITEM,
     'file' => 'wdi.admin.inc',
   );
+
+  $items['admin/config/search/wdi/settings'] = array(
+    'title' => 'General settings',
+    'access callback' => 'user_access',
+    'access arguments' => array('administer wdi'),
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'weight' => -1,
+  );
+
+  $items['admin/config/search/wdi/tasks'] = array(
+    'title' => 'Tasks',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('wdi_admin_settings_tasks_list'),
+    'access callback' => 'user_access',
+    'access arguments' => array('administer wdi'),
+    'type' => MENU_LOCAL_TASK,
+    'file' => 'wdi.admin.inc',
+    'weight' => 0,
+  );
+
+  $items['admin/config/search/wdi/tasks/list'] = array(
+    'title' => 'All tasks',
+    // 'page callback' => 'drupal_get_form',
+    // 'page arguments' => array('wdi_admin_settings'),
+    'access callback' => 'user_access',
+    'access arguments' => array('administer wdi'),
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'file' => 'wdi.admin.inc',
+    'weight' => -1,
+  );
+
+  $items['admin/config/search/wdi/tasks/add'] = array(
+    'title' => 'Add task',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('wdi_admin_settings_tasks_add'),
+    'access callback' => 'user_access',
+    'access arguments' => array('administer wdi'),
+    'type' => MENU_LOCAL_TASK,
+    'file' => 'wdi.admin.inc',
+    'weight' => 1,
+  );
+
+
+  $items['admin/config/search/wdi/jumplists'] = array(
+    'title' => 'Jumplists',
+    // 'page callback' => 'drupal_get_form',
+    // 'page arguments' => array('wdi_admin_settings'),
+    'access callback' => 'user_access',
+    'access arguments' => array('administer wdi'),
+    'type' => MENU_LOCAL_TASK,
+    'file' => 'wdi.admin.inc',
+    'weight' => 1,
+  );
+
+
+  $items['admin/config/search/wdi/jumplists/list'] = array(
+    'title' => 'All jumplists',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('wdi_admin_settings'),
+    'access callback' => 'user_access',
+    'access arguments' => array('administer wdi'),
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'file' => 'wdi.admin.inc',
+    'weight' => -1,
+  );
+
+  $items['admin/config/search/wdi/jumplists/add'] = array(
+    'title' => 'Add jumplist',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('wdi_admin_settings'),
+    'access callback' => 'user_access',
+    'access arguments' => array('administer wdi'),
+    'type' => MENU_LOCAL_TASK,
+    'file' => 'wdi.admin.inc',
+    'weight' => 1,
+  );
+
   return $items;
 }
 
