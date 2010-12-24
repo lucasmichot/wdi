@@ -107,7 +107,7 @@ function wdi_init() {
  * Returns TRUE if the browser is IE9
  */
 function _wdi_ie9() {
-  return $_SERVER['HTTP_USER_AGENT'] == 'Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.1; Trident/5.0';
+  return $_SERVER['HTTP_USER_AGENT'] == 'Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.1; Trident/5.0)';
 }
 
 /**
