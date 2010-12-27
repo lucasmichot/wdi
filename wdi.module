@@ -10,16 +10,36 @@
  * Implements hook_help().
  */
 function wdi_help($path, $arg) {
+  $message = NULL;
+
   switch ($path) {
     case 'admin/config/search/wdi':
+      $message = '<p>' . t('Help for general settings') . '</p>';
+      break;
+
     case 'admin/config/search/wdi/tasks':
-      return '<p>' . t('All tasks') . '</p>';
+      $message = '<p>' . t('Only <strong>the 5 first tasks</strong> will be displayed.') . '</p>';
+      break;
+
+    case 'admin/config/search/wdi/tasks/add':
+      $message = '<p>' . t('Help for add tasks') . '</p>';
+      break;
 
     case 'admin/config/search/wdi/jumplists':
+      $message = '<p>' . t('Help for all jumplists available') . '</p>';
+      break;
+
+    case 'admin/config/search/wdi/jumplists/add':
+      $message = '<p>' . t('Help for add jumplist item') . '</p>';
+      break;
+
     case 'admin/help#wdi':
-      $website = l('http://msdn.microsoft.com/en-us/library/gg131029(v=VS.85).aspx', 'http://msdn.microsoft.com/en-us/library/gg131029(v=VS.85).aspx', array('attributes' => array('target' => '_blank')));
-      return '<p>' . t('Get more help for Pinned Sites configuration at :') . '<br>' . $website . '</p>';
+      $uri     = 'http://msdn.microsoft.com/en-us/library/gg131029(v=VS.85).aspx';
+      $website = l($uri, $uri, array('attributes' => array('target' => '_blank')));
+      $message = '<p>' . t('Get more help for Pinned Sites configuration at :') . '<br>' . $website . '</p>';
+      break;
   }
+  return $message;
 }
 
 /**
@@ -62,7 +82,7 @@ function wdi_menu() {
   $items['admin/config/search/wdi/tasks'] = array(
     'title' => 'Tasks',
     'page callback' => 'drupal_get_form',
-    'page arguments' => array('wdi_admin_settings_tasks_list'),
+    'page arguments' => array('wdi_tasks_overview'),
     'access callback' => 'user_access',
     'access arguments' => array('administer wdi'),
     'type' => MENU_LOCAL_TASK,
@@ -72,8 +92,6 @@ function wdi_menu() {
 
   $items['admin/config/search/wdi/tasks/list'] = array(
     'title' => 'All tasks',
-    // 'page callback' => 'drupal_get_form',
-    // 'page arguments' => array('wdi_admin_settings'),
     'access callback' => 'user_access',
     'access arguments' => array('administer wdi'),
     'type' => MENU_DEFAULT_LOCAL_TASK,
@@ -95,8 +113,6 @@ function wdi_menu() {
 
   $items['admin/config/search/wdi/jumplists'] = array(
     'title' => 'Jumplists',
-    // 'page callback' => 'drupal_get_form',
-    // 'page arguments' => array('wdi_admin_settings'),
     'access callback' => 'user_access',
     'access arguments' => array('administer wdi'),
     'type' => MENU_LOCAL_TASK,
@@ -180,9 +196,10 @@ function wdi_admin_settings_reset_submit($form, &$form_state) {
  * Implements hook_init().
  */
 function wdi_init() {
-  if (_wdi_ie9() == TRUE) {
-    _wdi_set_general_metas();
-  }
+  // if (_wdi_ie9() == true) {
+  _wdi_set_general_metas();
+  _wdi_set_tasks();
+  //}
 }
 
 /**
@@ -389,3 +406,134 @@ function _wdi_set_general_metas() {
   }
 }
 
+function _wdi_set_tasks() {
+  $tasks = wdi_tasks(FALSE);
+
+  foreach ($tasks as $task) {
+    $element = array(
+      '#tag' => 'meta',
+      '#attributes' => array(
+        'name' => 'msapplication-task',
+        'content' => 'name=' . $task->name. ';action-uri=' . $task->action_uri . ';icon-uri=' . $task->icon_uri,
+      ),
+      '#weight' => 100 + $task->weight ,
+    );
+    dpm($element);
+    drupal_add_html_head($element, 'wdi_task_' . $task->name);
+  }
+}
+
+/**
+ * Return all tasks
+ */
+function wdi_tasks($admin = TRUE) {
+  // Query wdi_tasks table
+  $result = db_select('wdi_tasks', 'wt')->fields('wt', array('tid', 'name', 'action_uri', 'icon_uri', 'weight'))->orderBy('weight', 'ASC')->execute();
+
+  // Set resutl array
+  $records = array();
+
+  // For each record we have found
+  foreach ($result as $record) {
+    $record->icon_uri = $record->icon_uri == -1 ? _wdi_default_favicon() : $record->icon_uri;
+    $records[$record->tid] = $record;
+  }
+  
+  if($admin == false){
+  	$records = array_slice($records, 0, 5);
+  }
+  
+  // Return result
+  return $records;
+}
+
+/**
+ * Implements hook_theme().
+ */
+function wdi_theme($existing, $type, $theme, $path) {
+  $themes = array();
+  $themes['wdi_tasks_overview'] = array(
+    'render element' => 'form',
+  );
+  return $themes;
+}
+
+/**
+ * theme function for wdi_tasks_owerview form
+ */
+function theme_wdi_tasks_overview($variables) {
+  // Get form
+  $form = $variables['form'];
+
+  // Set header
+  $header = array(
+    t('Icon'),
+    t('Name'),
+    t('URI'),
+    t('Weight'),
+    array(
+      'data' => t('Operations'),
+      'colspan' => 2,
+    ),
+  );
+
+  // Define rows
+  $rows = array();
+
+  // For each task
+  $tasks = element_children($form['tasks']);
+  foreach ($tasks as $tid) {
+    $rows[] = array(
+      'data' => array(
+        drupal_render($form['tasks'][$tid]['icon_uri']),
+        drupal_render($form['tasks'][$tid]['name']),
+        drupal_render($form['tasks'][$tid]['action_uri']),
+        drupal_render($form['tasks'][$tid]['weight']),
+        drupal_render($form['tasks'][$tid]['edit']),
+        drupal_render($form['tasks'][$tid]['delete']),
+      ),
+      'class' => array('draggable'),
+    );
+  }
+
+  // Set table variable
+  $table_variable = array(
+    'header' => $header,
+    'rows' => $rows,
+    'empty' => t('No task defined. <a href="@url">Add a task</a> now.', array('@url' => url('admin/config/search/wdi/tasks/add'))),
+    'attributes' => array(
+      'id' => 'wdi-tasks-order',
+    ),
+  );
+
+  // Render table
+  $table = theme('table', $table_variable);
+  drupal_add_tabledrag('wdi-tasks-order', 'order', 'sibling', 'wdi-tasks-order-weight');
+
+  // Render the rest of the form
+  return $table . drupal_render_children($form);
+}
+
+/**
+ * Submit function for wdi_tasks_overview form
+ */
+function wdi_tasks_overview_submit($form, &$form_state) {
+  foreach ($form_state['values']['tasks'] as $tid => $task) {
+    if (is_array($task) && isset($task['weight'])) {
+      db_update('wdi_tasks')->fields(array('weight' => $task['weight']))->condition('tid', $tid)->execute();
+    }
+  }
+  // Clear the cache
+  cache_clear_all('wdi_tasks', 'cache');
+
+  // Display a message
+  drupal_set_message(t('The tasks ordering has been saved.'));
+}
+
+/**
+ * Get favicon
+ */
+function _wdi_default_favicon() {
+  global $conf;
+  return empty($conf['theme_settings']['favicon_path']) ? 'misc/favicon.ico' : $conf['theme_settings']['favicon_path'];
+}

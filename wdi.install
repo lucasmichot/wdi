@@ -7,13 +7,6 @@
  */
 
 /**
- * Implements hook_install().
- */
-function wdi_install() {
-  drupal_install_schema('wdi');
-}
-
-/**
  * Implements hook_schema().
  */
 function wdi_schema() {
@@ -32,6 +25,12 @@ function wdi_schema() {
         'length' => '255',
         'not null' => TRUE,
         'default' => '',
+      ),
+      'action_uri_type' => array(
+        'description' => 'The type of Acton URI.',
+        'type' => 'int',
+        'length' => '255',
+        'not null' => TRUE,
       ),
       'action_uri' => array(
         'description' => 'The URI of the task.',
@@ -63,7 +62,10 @@ function wdi_schema() {
  * Implements hook_uninstall().
  */
 function wdi_uninstall() {
+  // Uninstall schema
   drupal_uninstall_schema('wdi');
+
+  // Delete variables
   $variables = array(
     'wdi_application_name',
     'wdi_msapplication_tooltip',
@@ -73,5 +75,18 @@ function wdi_uninstall() {
     'wdi_msapplication_window_height',
   );
   array_map('variable_del', $variables);
+
+  // Delete cache
+  $cache_items = array(
+    'wdi_tasks',
+  );
+  array_map('cache_clear_all', $variables, 'cache');
+  //cache_clear_all('wdi_tasks', 'cache');
+
+  // Remove WDI file folder
+  drupal_rmdir('public://wdi');
+
+  // Inform user the module has been uninstalled
+  drupal_set_message(st('WDI module has been successflully uninstalled.'));
 }
 
